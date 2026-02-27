@@ -1,4 +1,4 @@
-# Picselit
+# PicSelIt
 
 Picselit is a modern, responsive web application designed for pixel art and perler/fuse bead planning. Easily convert photos into customizable pixel grids, adjust colors in real-time, and track your physical bead placements interactively.
 
