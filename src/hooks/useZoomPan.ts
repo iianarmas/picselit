@@ -11,6 +11,9 @@ export interface ZoomPanHandlers {
     onPointerDown: (e: React.PointerEvent<HTMLCanvasElement>) => void;
     onPointerMove: (e: React.PointerEvent<HTMLCanvasElement>) => void;
     onPointerUp: (e: React.PointerEvent<HTMLCanvasElement>) => void;
+    onTouchStart: (e: React.TouchEvent<HTMLCanvasElement>) => void;
+    onTouchMove: (e: React.TouchEvent<HTMLCanvasElement>) => void;
+    onTouchEnd: (e: React.TouchEvent<HTMLCanvasElement>) => void;
     resetView: () => void;
     panToCell: (row: number, col: number, gridW: number, gridH: number, canvasW: number, canvasH: number) => void;
     /** Convert canvas pixel coords to grid cell coords */
@@ -99,6 +102,62 @@ export function useZoomPan(
         setIsDragging(false);
     }, []);
 
+    const initialTouchRef = useRef<{ dist: number, scale: number, cx: number, cy: number, ox: number, oy: number } | null>(null);
+
+    const onTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+        if (e.touches.length === 2) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            const p1 = { x: t1.clientX - rect.left, y: t1.clientY - rect.top };
+            const p2 = { x: t2.clientX - rect.left, y: t2.clientY - rect.top };
+
+            const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+            const cx = (p1.x + p2.x) / 2;
+            const cy = (p1.y + p2.y) / 2;
+
+            initialTouchRef.current = {
+                dist,
+                scale: state.scale,
+                cx, cy,
+                ox: state.offsetX,
+                oy: state.offsetY
+            };
+        } else {
+            initialTouchRef.current = null;
+        }
+    }, [state]);
+
+    const onTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+        if (e.touches.length === 2 && initialTouchRef.current) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            const p1 = { x: t1.clientX - rect.left, y: t1.clientY - rect.top };
+            const p2 = { x: t2.clientX - rect.left, y: t2.clientY - rect.top };
+
+            const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+            const cx = (p1.x + p2.x) / 2;
+            const cy = (p1.y + p2.y) / 2;
+
+            const init = initialTouchRef.current;
+            const distRatio = dist / init.dist;
+
+            const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, init.scale * distRatio));
+
+            const newOffsetX = cx - (init.cx - init.ox) * (newScale / init.scale);
+            const newOffsetY = cy - (init.cy - init.oy) * (newScale / init.scale);
+
+            setState({ scale: newScale, offsetX: newOffsetX, offsetY: newOffsetY });
+        }
+    }, []);
+
+    const onTouchEnd = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+        if (e.touches.length < 2) {
+            initialTouchRef.current = null;
+        }
+    }, []);
+
     const resetView = useCallback(() => {
         setState({ scale: 1, offsetX: 0, offsetY: 0 });
     }, []);
@@ -133,6 +192,9 @@ export function useZoomPan(
         onPointerDown,
         onPointerMove,
         onPointerUp,
+        onTouchStart,
+        onTouchMove,
+        onTouchEnd,
         resetView,
         panToCell,
         canvasToGrid,

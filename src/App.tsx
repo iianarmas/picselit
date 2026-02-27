@@ -228,11 +228,11 @@ export default function App() {
             style={{ background: 'linear-gradient(135deg, #6c63ff, #a78bfa)' }}>
             <Layers size={16} className="text-white" />
           </div>
-          <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
+          <span className="hidden sm:inline-block text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
             pics<span style={{ color: 'var(--color-accent)' }}>elit</span>
           </span>
         </div>
-        <span className="text-xs px-2 py-0.5 rounded-full"
+        <span className="hidden sm:inline-block text-xs px-2 py-0.5 rounded-full"
           style={{ background: 'rgba(108,99,255,0.12)', color: 'var(--color-accent2)', border: '1px solid rgba(108,99,255,0.22)' }}>
           Bead Planner
         </span>
@@ -257,12 +257,12 @@ export default function App() {
           {user ? (
             <div className="flex items-center gap-3">
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shadow-md border border-[var(--color-accent2)]"
+                className="w-8 h-8 rounded-full flex shrink-0 items-center justify-center font-bold text-white shadow-md border border-[var(--color-accent2)]"
                 style={{ background: 'linear-gradient(135deg, #a78bfa, #6c63ff)' }}
               >
                 {user.user_metadata?.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
               </div>
-              <div className="flex flex-col">
+              <div className="hidden sm:flex flex-col">
                 <span className="font-semibold text-xs leading-none" style={{ color: 'var(--color-text)' }}>
                   {user.user_metadata?.first_name} {user.user_metadata?.last_name}
                 </span>
@@ -275,7 +275,7 @@ export default function App() {
                   handleReset();
                   signOut();
                 }}
-                className="text-xs px-3 py-1.5 rounded-lg border ml-2 transition-colors hover:bg-[var(--color-surface2)]"
+                className="hidden sm:inline-block text-xs px-3 py-1.5 rounded-lg border ml-2 transition-colors hover:bg-[var(--color-surface2)]"
                 style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
               >
                 Sign Out
@@ -321,14 +321,21 @@ export default function App() {
       />
 
       {/* Main content */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Backdrop for mobile */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-20 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
         <aside
-          className="flex flex-col flex-shrink-0 transition-all duration-200"
+          className="flex flex-col flex-shrink-0 transition-all duration-200 absolute md:relative z-30 h-full shadow-2xl md:shadow-none"
           style={{
-            width: sidebarOpen ? 280 : 0,
-            minWidth: sidebarOpen ? 280 : 0,
-            overflow: 'hidden',
+            width: 280,
+            transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
             borderRight: '1px solid var(--color-border)',
             background: 'var(--color-surface)',
           }}
@@ -393,18 +400,17 @@ export default function App() {
         {/* Sidebar toggle */}
         <button
           onClick={() => setSidebarOpen(v => !v)}
-          className="flex-shrink-0 flex items-center justify-center"
+          className="flex-shrink-0 flex items-center justify-center absolute md:relative z-10 bottom-4 left-4 md:bottom-auto md:left-auto md:h-full shadow-lg md:shadow-none rounded-full md:rounded-none"
           style={{
-            width: 18, background: 'var(--color-surface)', borderRight: '1px solid var(--color-border)',
-            color: 'var(--color-muted)', cursor: 'pointer', border: 'none', padding: 0,
+            width: 36, height: 36, background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-muted)', cursor: 'pointer', padding: 0
           }}
           title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         >
-          {sidebarOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+          {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
 
         {/* Canvas area */}
-        <main className="flex-1 flex flex-col min-w-0 min-h-0">
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 ml-0 md:ml-0 overflow-hidden" style={{ transition: 'margin 0.2s', marginLeft: sidebarOpen ? '0' : '0' }}>
           {!imageLoaded ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
               <div className="text-center max-w-md">

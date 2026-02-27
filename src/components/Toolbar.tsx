@@ -42,8 +42,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     const pct = totalCount > 0 ? Math.round((markedCount / totalCount) * 100) : 0;
 
     return (
-        <div className="flex items-center gap-2 px-4 py-2 flex-wrap"
-            style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)', minHeight: 52 }}>
+        <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto hide-scrollbar whitespace-nowrap"
+            style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
 
             {/* Undo / Redo */}
             <div className="flex items-center">

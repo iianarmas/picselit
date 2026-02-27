@@ -31,7 +31,7 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     const cols = rows > 0 ? pixelColors[0].length : 0;
 
     const zoom = useZoomPan(CELL);
-    const { state: zp, onWheel, onPointerDown, onPointerMove, onPointerUp, canvasToGrid, panToCell, isSpacePressed, isDragging } = zoom;
+    const { state: zp, onWheel, onPointerDown, onPointerMove, onPointerUp, onTouchStart, onTouchMove, onTouchEnd, canvasToGrid, panToCell, isSpacePressed, isDragging } = zoom;
 
     // Rect selection state
     const [rectStart, setRectStart] = useState<[number, number] | null>(null);
@@ -241,6 +241,24 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
         setIsRectSelecting(false);
     }, [onPointerUp, rows, rectStart, rectEnd, isRectSelecting, onTogglePixel, onMarkRect]);
 
+    const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+        onTouchStart(e);
+        if (e.touches.length >= 2) {
+            pointerDownPos.current = null;
+            setRectStart(null);
+            setRectEnd(null);
+            setIsRectSelecting(false);
+        }
+    }, [onTouchStart]);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+        onTouchMove(e);
+    }, [onTouchMove]);
+
+    const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+        onTouchEnd(e);
+    }, [onTouchEnd]);
+
     const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
 
     const isEmpty = rows === 0;
@@ -254,12 +272,16 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
                 height={canvasSize.h}
                 style={{
                     display: 'block', width: canvasSize.w, height: canvasSize.h,
-                    cursor: isSpacePressed ? (isDragging ? 'grabbing' : 'grab') : (isRectSelecting ? 'crosshair' : 'default')
+                    cursor: isSpacePressed ? (isDragging ? 'grabbing' : 'grab') : (isRectSelecting ? 'crosshair' : 'default'),
+                    touchAction: 'none'
                 }}
                 onWheel={onWheel}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 onContextMenu={handleContextMenu}
             />
 
