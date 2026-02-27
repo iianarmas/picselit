@@ -32,7 +32,7 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     const cols = rows > 0 ? pixelColors[0].length : 0;
 
     const zoom = useZoomPan(CELL);
-    const { state: zp, onWheel, onPointerDown, onPointerMove, onPointerUp, canvasToGrid, panToCell } = zoom;
+    const { state: zp, onWheel, onPointerDown, onPointerMove, onPointerUp, canvasToGrid, panToCell, isSpacePressed, isDragging } = zoom;
 
     // Rect selection state
     const [rectStart, setRectStart] = useState<[number, number] | null>(null);
@@ -184,7 +184,7 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     const hasMoved = useRef(false);
 
     const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-        if (e.button === 1 || e.button === 2 || e.altKey) {
+        if (e.button === 1 || e.button === 2 || e.altKey || isSpacePressed) {
             onPointerDown(e);
             return;
         }
@@ -253,7 +253,10 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
                 ref={canvasRef}
                 width={canvasSize.w}
                 height={canvasSize.h}
-                style={{ display: 'block', width: canvasSize.w, height: canvasSize.h, cursor: isRectSelecting ? 'crosshair' : 'default' }}
+                style={{
+                    display: 'block', width: canvasSize.w, height: canvasSize.h,
+                    cursor: isSpacePressed ? (isDragging ? 'grabbing' : 'grab') : (isRectSelecting ? 'crosshair' : 'default')
+                }}
                 onWheel={onWheel}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
@@ -271,7 +274,7 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
             {!isEmpty && (
                 <div className="absolute bottom-3 right-3 text-xs font-mono px-2 py-1 rounded"
                     style={{ background: 'rgba(15,17,23,0.75)', color: 'var(--color-muted)', backdropFilter: 'blur(4px)' }}>
-                    {Math.round(zp.scale * 100)}% · scroll to zoom · alt+drag to pan · drag to select
+                    {Math.round(zp.scale * 100)}% · scroll to zoom · space+drag to pan · drag to select
                 </div>
             )}
         </div>

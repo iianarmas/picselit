@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 export interface ZoomPanState {
     scale: number;
@@ -16,6 +16,7 @@ export interface ZoomPanHandlers {
     /** Convert canvas pixel coords to grid cell coords */
     canvasToGrid: (cx: number, cy: number) => [number, number];
     isDragging: boolean;
+    isSpacePressed: boolean;
     state: ZoomPanState;
 }
 
@@ -28,6 +29,29 @@ export function useZoomPan(
     const [state, setState] = useState<ZoomPanState>({ scale: 1, offsetX: 0, offsetY: 0 });
     const dragRef = useRef<{ startX: number; startY: number; startOX: number; startOY: number } | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [isSpacePressed, setIsSpacePressed] = useState(false);
+
+    // Track spacebar for panning
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === 'Space' && !e.repeat && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                setIsSpacePressed(true);
+            }
+        };
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                setIsSpacePressed(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
 
     const onWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
         e.preventDefault();
@@ -46,8 +70,8 @@ export function useZoomPan(
     }, []);
 
     const onPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-        if (e.button === 1 || e.button === 2 || e.altKey) {
-            // Middle click or alt+click = pan
+        if (e.button === 1 || e.button === 2 || e.altKey || isSpacePressed) {
+            // Middle click, right click, alt+click, or space+click = pan
             e.currentTarget.setPointerCapture(e.pointerId);
             dragRef.current = {
                 startX: e.clientX,
@@ -57,7 +81,7 @@ export function useZoomPan(
             };
             setIsDragging(true);
         }
-    }, [state.offsetX, state.offsetY]);
+    }, [state.offsetX, state.offsetY, isSpacePressed]);
 
     const onPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
         if (!dragRef.current) return;
@@ -113,6 +137,7 @@ export function useZoomPan(
         panToCell,
         canvasToGrid,
         isDragging,
+        isSpacePressed,
         state,
     };
 }

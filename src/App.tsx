@@ -30,6 +30,8 @@ export default function App() {
   const [contrast, setContrast] = useState(100);
   const [saturation, setSaturation] = useState(100);
   const [vibrancy, setVibrancy] = useState(100);
+  const [targetColors, setTargetColors] = useState(0);
+  const [colorSimilarity, setColorSimilarity] = useState(0);
 
   // UI state
   const [showGrid, setShowGrid] = useState(true);
@@ -49,7 +51,7 @@ export default function App() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerReprocess = useCallback((w: number, h: number, adj: {
-    brightness: number; contrast: number; saturation: number; vibrancy: number;
+    brightness: number; contrast: number; saturation: number; vibrancy: number; targetColors: number; colorSimilarity: number;
   }) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -74,8 +76,8 @@ export default function App() {
     setGridH(h);
     setImageLoaded(true);
     setHighlightedColor(null);
-    process(img, w, h, { brightness: 100, contrast: 100, saturation: 100, vibrancy: 100 });
-    setBrightness(100); setContrast(100); setSaturation(100); setVibrancy(100);
+    process(img, w, h, { brightness: 100, contrast: 100, saturation: 100, vibrancy: 100, targetColors: 0, colorSimilarity: 0 });
+    setBrightness(100); setContrast(100); setSaturation(100); setVibrancy(100); setTargetColors(0); setColorSimilarity(0);
   }, [process]);
 
   const handleReset = () => {
@@ -85,17 +87,19 @@ export default function App() {
     marking.reset(0, 0);
     setGridW(DEFAULT_GRID_W);
     setGridH(DEFAULT_GRID_H);
-    setBrightness(100); setContrast(100); setSaturation(100); setVibrancy(100);
+    setBrightness(100); setContrast(100); setSaturation(100); setVibrancy(100); setTargetColors(0); setColorSimilarity(0);
   };
 
   // Slider change handlers (only if not locked)
-  const handleBrightness = (v: number) => { if (adjustmentsLocked) return; setBrightness(v); triggerReprocess(gridW, gridH, { brightness: v, contrast, saturation, vibrancy }); };
-  const handleContrast = (v: number) => { if (adjustmentsLocked) return; setContrast(v); triggerReprocess(gridW, gridH, { brightness, contrast: v, saturation, vibrancy }); };
-  const handleSaturation = (v: number) => { if (adjustmentsLocked) return; setSaturation(v); triggerReprocess(gridW, gridH, { brightness, contrast, saturation: v, vibrancy }); };
-  const handleVibrancy = (v: number) => { if (adjustmentsLocked) return; setVibrancy(v); triggerReprocess(gridW, gridH, { brightness, contrast, saturation, vibrancy: v }); };
+  const handleBrightness = (v: number) => { if (adjustmentsLocked) return; setBrightness(v); triggerReprocess(gridW, gridH, { brightness: v, contrast, saturation, vibrancy, targetColors, colorSimilarity }); };
+  const handleContrast = (v: number) => { if (adjustmentsLocked) return; setContrast(v); triggerReprocess(gridW, gridH, { brightness, contrast: v, saturation, vibrancy, targetColors, colorSimilarity }); };
+  const handleSaturation = (v: number) => { if (adjustmentsLocked) return; setSaturation(v); triggerReprocess(gridW, gridH, { brightness, contrast, saturation: v, vibrancy, targetColors, colorSimilarity }); };
+  const handleVibrancy = (v: number) => { if (adjustmentsLocked) return; setVibrancy(v); triggerReprocess(gridW, gridH, { brightness, contrast, saturation, vibrancy: v, targetColors, colorSimilarity }); };
+  const handleTargetColors = (v: number) => { if (adjustmentsLocked) return; setTargetColors(v); triggerReprocess(gridW, gridH, { brightness, contrast, saturation, vibrancy, targetColors: v, colorSimilarity }); };
+  const handleColorSimilarity = (v: number) => { if (adjustmentsLocked) return; setColorSimilarity(v); triggerReprocess(gridW, gridH, { brightness, contrast, saturation, vibrancy, targetColors, colorSimilarity: v }); };
 
-  const handleGridW = (v: number) => { if (adjustmentsLocked) return; setGridW(v); triggerReprocess(v, gridH, { brightness, contrast, saturation, vibrancy }); };
-  const handleGridH = (v: number) => { if (adjustmentsLocked) return; setGridH(v); triggerReprocess(gridW, v, { brightness, contrast, saturation, vibrancy }); };
+  const handleGridW = (v: number) => { if (adjustmentsLocked) return; setGridW(v); triggerReprocess(v, gridH, { brightness, contrast, saturation, vibrancy, targetColors, colorSimilarity }); };
+  const handleGridH = (v: number) => { if (adjustmentsLocked) return; setGridH(v); triggerReprocess(gridW, v, { brightness, contrast, saturation, vibrancy, targetColors, colorSimilarity }); };
 
   const handleRegisterPanToNext = useCallback((fn: () => void) => {
     panToNextRef.current = fn;
@@ -199,10 +203,12 @@ export default function App() {
                       gridW={gridW} gridH={gridH} aspectRatio={aspectRatio}
                       brightness={brightness} contrast={contrast}
                       saturation={saturation} vibrancy={vibrancy}
+                      targetColors={targetColors} colorSimilarity={colorSimilarity}
                       locked={adjustmentsLocked}
                       onGridWChange={handleGridW} onGridHChange={handleGridH}
                       onBrightnessChange={handleBrightness} onContrastChange={handleContrast}
                       onSaturationChange={handleSaturation} onVibrancyChange={handleVibrancy}
+                      onTargetColorsChange={handleTargetColors} onColorSimilarityChange={handleColorSimilarity}
                       linkAspectRatio={linkAspect} onLinkAspectRatioChange={setLinkAspect}
                     />
                 )}
