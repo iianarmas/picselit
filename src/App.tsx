@@ -14,7 +14,8 @@ import type { ProjectData } from './hooks/useProjects';
 import { ProjectsModal } from './components/ProjectsModal';
 import type { MarkGrid } from './hooks/useMarkingState';
 import { useTheme } from './hooks/useTheme';
-import { Layers, Settings, Palette, ChevronLeft, ChevronRight, Loader2, Moon, Sun } from 'lucide-react';
+import { MobileNav } from './components/MobileNav';
+import { Layers, Settings, Palette, ChevronLeft, ChevronRight, Loader2, Moon, Sun, Menu } from 'lucide-react';
 
 const DEFAULT_GRID_W = 32;
 const DEFAULT_GRID_H = 32;
@@ -60,7 +61,7 @@ export default function App() {
   const [previewMode, setPreviewMode] = useState(false);
   const [highlightedColor, setHighlightedColor] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('settings');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
 
   // Marking
   const marking = useMarkingState();
@@ -254,6 +255,15 @@ export default function App() {
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden w-8 h-8 rounded-full flex items-center justify-center transition-colors text-[var(--color-muted)] hover:text-[var(--color-text)]"
+            >
+              <Menu size={18} />
+            </button>
+          )}
+
           {user ? (
             <div className="flex items-center gap-3">
               <div
@@ -321,105 +331,131 @@ export default function App() {
       />
 
       {/* Main content */}
-      <div className="flex flex-1 min-h-0 relative">
-        {/* Backdrop for mobile */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-20 md:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
+      <div className="flex flex-1 min-h-0 relative overflow-hidden">
+        {/* Sidebar / Bottom Sheet */}
         <aside
-          className="flex flex-col flex-shrink-0 transition-all duration-200 absolute md:relative z-30 h-full shadow-2xl md:shadow-none"
+          className="flex flex-col flex-shrink-0 transition-all duration-300 absolute md:relative z-30 shadow-2xl md:shadow-none"
           style={{
-            width: 280,
-            transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-            borderRight: '1px solid var(--color-border)',
+            width: window.innerWidth > 768 ? (sidebarOpen ? 280 : 0) : '100%',
+            height: window.innerWidth > 768 ? '100%' : '45%',
+            bottom: 0,
+            transform: sidebarOpen ? 'translateY(0)' : (window.innerWidth > 768 ? 'translateX(-100%)' : 'translateY(100%)'),
+            borderRight: sidebarOpen ? '1px solid var(--color-border)' : 'none',
+            borderTop: window.innerWidth > 768 ? 'none' : '1px solid var(--color-border)',
             background: 'var(--color-surface)',
+            borderRadius: window.innerWidth > 768 ? '0' : '20px 20px 0 0',
+            overflow: 'visible'
           }}
         >
-          {sidebarOpen && (
-            <div className="flex flex-col h-full p-3" style={{ width: 280 }}>
-              {/* Tab bar */}
-              <div className="flex rounded-lg p-0.5 mb-3 flex-shrink-0"
-                style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
-                {([['settings', 'Settings', Settings], ['palette', 'Colors', Palette]] as const).map(([key, label, Icon]) => (
-                  <button key={key} onClick={() => setActiveTab(key as Tab)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all"
-                    style={{
-                      background: activeTab === key ? 'var(--color-surface2)' : 'transparent',
-                      color: activeTab === key ? 'var(--color-text)' : 'var(--color-muted)',
-                      border: activeTab === key ? '1px solid var(--color-border)' : '1px solid transparent',
-                    }}>
-                    <Icon size={12} /> {label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab content */}
-              <div className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
-                {activeTab === 'settings' && (
-                  !imageLoaded
-                    ? <UploadPanel onImageLoad={handleImageLoad} />
-                    : <ControlPanel
-                      gridW={gridW} gridH={gridH} aspectRatio={aspectRatio}
-                      brightness={brightness} contrast={contrast}
-                      saturation={saturation} vibrancy={vibrancy}
-                      targetColors={targetColors} colorSimilarity={colorSimilarity}
-                      locked={adjustmentsLocked}
-                      onGridWChange={handleGridW} onGridHChange={handleGridH}
-                      onBrightnessChange={handleBrightness} onContrastChange={handleContrast}
-                      onSaturationChange={handleSaturation} onVibrancyChange={handleVibrancy}
-                      onTargetColorsChange={handleTargetColors} onColorSimilarityChange={handleColorSimilarity}
-                      linkAspectRatio={linkAspect} onLinkAspectRatioChange={setLinkAspect}
-                    />
-                )}
-                {activeTab === 'palette' && result && (
-                  <ColorPalette
-                    uniqueColors={uniqueColors}
-                    totalPixels={totalPixels}
-                    marked={marking.marked}
-                    pixelColors={pixelColors}
-                    highlightedColor={highlightedColor}
-                    onHighlightColor={setHighlightedColor}
-                    onMarkByColor={(hex, v) => marking.markByColor(hex, pixelColors, v)}
-                  />
-                )}
-                {activeTab === 'palette' && !result && (
-                  <p className="text-xs text-center mt-8" style={{ color: 'var(--color-muted)' }}>
-                    Upload an image to see the color palette.
-                  </p>
-                )}
+          <div
+            className="flex flex-col h-full p-3 overflow-hidden"
+            style={{
+              width: window.innerWidth > 768 ? 280 : '100%',
+              opacity: sidebarOpen ? 1 : 0,
+              pointerEvents: sidebarOpen ? 'auto' : 'none',
+              transition: 'opacity 0.2s ease-in-out'
+            }}
+          >
+            {/* Header (Mobile Handle / Close) */}
+            <div className="md:hidden flex flex-col items-center mb-4">
+              <div className="w-12 h-1.5 bg-[var(--color-border)] rounded-full mb-4 opacity-50" />
+              <div className="w-full flex items-center justify-between px-2">
+                <span className="font-bold text-sm">Design Suite</span>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="p-1 rounded-md hover:bg-[var(--color-surface2)] text-[var(--color-muted)]"
+                >
+                  <ChevronLeft size={20} className="rotate-270" style={{ transform: 'rotate(-90deg)' }} />
+                </button>
               </div>
             </div>
-          )}
+
+            {/* Tab bar (Desktop only) */}
+            <div className="hidden md:flex rounded-lg p-0.5 mb-3 flex-shrink-0"
+              style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
+              {([['settings', 'Settings', Settings], ['palette', 'Colors', Palette]] as const).map(([key, label, Icon]) => (
+                <button key={key} onClick={() => setActiveTab(key as Tab)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all"
+                  style={{
+                    background: activeTab === key ? 'var(--color-surface2)' : 'transparent',
+                    color: activeTab === key ? 'var(--color-text)' : 'var(--color-muted)',
+                    border: activeTab === key ? '1px solid var(--color-border)' : '1px solid transparent',
+                  }}>
+                  <Icon size={12} /> {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
+              {activeTab === 'settings' && (
+                !imageLoaded
+                  ? <UploadPanel onImageLoad={handleImageLoad} />
+                  : <ControlPanel
+                    gridW={gridW} gridH={gridH} aspectRatio={aspectRatio}
+                    brightness={brightness} contrast={contrast}
+                    saturation={saturation} vibrancy={vibrancy}
+                    targetColors={targetColors} colorSimilarity={colorSimilarity}
+                    locked={adjustmentsLocked}
+                    onGridWChange={handleGridW} onGridHChange={handleGridH}
+                    onBrightnessChange={handleBrightness} onContrastChange={handleContrast}
+                    onSaturationChange={handleSaturation} onVibrancyChange={handleVibrancy}
+                    onTargetColorsChange={handleTargetColors} onColorSimilarityChange={handleColorSimilarity}
+                    linkAspectRatio={linkAspect} onLinkAspectRatioChange={setLinkAspect}
+                  />
+              )}
+              {activeTab === 'palette' && result && (
+                <ColorPalette
+                  uniqueColors={uniqueColors}
+                  totalPixels={totalPixels}
+                  marked={marking.marked}
+                  pixelColors={pixelColors}
+                  highlightedColor={highlightedColor}
+                  onHighlightColor={setHighlightedColor}
+                  onMarkByColor={(hex, v) => marking.markByColor(hex, pixelColors, v)}
+                />
+              )}
+              {activeTab === 'palette' && !result && (
+                <p className="text-xs text-center mt-8" style={{ color: 'var(--color-muted)' }}>
+                  Upload an image to see the color palette.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop Sidebar toggle (Integrated into Aside) */}
+          <button
+            onClick={() => setSidebarOpen(v => !v)}
+            className="hidden md:flex items-center justify-center absolute z-40"
+            style={{
+              width: 24, height: 36,
+              right: -24, top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)',
+              borderLeft: 'none',
+              borderRadius: '0 8px 8px 0',
+              color: 'var(--color-muted)',
+              cursor: 'pointer',
+              padding: 0
+            }}
+            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+          </button>
         </aside>
 
-        {/* Sidebar toggle */}
-        <button
-          onClick={() => setSidebarOpen(v => !v)}
-          className="flex-shrink-0 flex items-center justify-center absolute md:relative z-10 bottom-4 left-4 md:bottom-auto md:left-auto md:h-full shadow-lg md:shadow-none rounded-full md:rounded-none"
-          style={{
-            width: 36, height: 36, background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-muted)', cursor: 'pointer', padding: 0
-          }}
-          title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-        >
-          {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-        </button>
-
         {/* Canvas area */}
-        <main className="flex-1 flex flex-col min-w-0 min-h-0 ml-0 md:ml-0 overflow-hidden" style={{ transition: 'margin 0.2s', marginLeft: sidebarOpen ? '0' : '0' }}>
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
           {!imageLoaded ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
+            <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 overflow-y-auto">
               <div className="text-center max-w-md">
-                <h1 className="text-3xl font-bold mb-2"
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2"
                   style={{ background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent2))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  Picselit — Bead Planner
+                  picselit
                 </h1>
-                <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-                  Upload a photo, pixelate it, and plan your perler bead project. Click ← Settings to get started.
+                <p className="text-xs sm:text-sm" style={{ color: 'var(--color-muted)' }}>
+                  Upload a photo, pixelate it, and plan your bead project.
                 </p>
               </div>
               <div className="w-full max-w-sm">
@@ -433,12 +469,6 @@ export default function App() {
               >
                 <Layers size={16} /> Open a Saved Project
               </button>
-
-              <div className="flex gap-6 text-xs mt-4" style={{ color: 'var(--color-muted)' }}>
-                {['🎨 Adjust colors', '🔲 Interactive grid', '✅ Track progress', '📥 Export PNG'].map(f => (
-                  <span key={f}>{f}</span>
-                ))}
-              </div>
             </div>
           ) : (
             <PixelCanvas
@@ -452,9 +482,20 @@ export default function App() {
               onMarkRect={marking.markRect}
               onRegisterPanToNext={handleRegisterPanToNext}
             />
-          )}
-        </main>
-      </div>
-    </div>
+          )
+          }
+        </main >
+      </div >
+
+      {/* Mobile Navigation */}
+      < MobileNav
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          setSidebarOpen(true);
+        }}
+        visible={imageLoaded}
+      />
+    </div >
   );
 }

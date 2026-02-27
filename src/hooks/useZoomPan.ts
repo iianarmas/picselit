@@ -21,6 +21,7 @@ export interface ZoomPanHandlers {
     isDragging: boolean;
     isSpacePressed: boolean;
     state: ZoomPanState;
+    setState: React.Dispatch<React.SetStateAction<ZoomPanState>>;
 }
 
 const MIN_SCALE = 0.05;
@@ -201,5 +202,6 @@ export function useZoomPan(
         isDragging,
         isSpacePressed,
         state,
+        setState,
     };
 }

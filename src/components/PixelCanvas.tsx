@@ -1,5 +1,5 @@
 import React, {
-    useRef, useEffect, useCallback, useState
+    useRef, useEffect, useCallback, useState, useLayoutEffect, useMemo
 } from 'react';
 import { useZoomPan } from '../hooks/useZoomPan';
 
@@ -62,8 +62,53 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
         return () => ro.disconnect();
     }, []);
 
-    // Drawing
+    // Auto-fit on initial load or container resize
+    const hasInitialFit = useRef(false);
     useEffect(() => {
+        if (rows > 0 && cols > 0 && canvasSize.w > 0 && canvasSize.h > 0 && !hasInitialFit.current) {
+            const scaleW = (canvasSize.w * 0.9) / (cols * CELL);
+            const scaleH = (canvasSize.h * 0.9) / (rows * CELL);
+            const newScale = Math.min(scaleW, scaleH, 1.5); // don't over-zoom small projects
+
+            const totalW = cols * CELL * newScale;
+            const totalH = rows * CELL * newScale;
+
+            zoom.setState({
+                scale: newScale,
+                offsetX: (canvasSize.w - totalW) / 2,
+                offsetY: (canvasSize.h - totalH) / 2
+            });
+            hasInitialFit.current = true;
+        }
+    }, [rows, cols, canvasSize.w, canvasSize.h, zoom]);
+
+    // Reset fit flag when image is reset
+    useEffect(() => {
+        if (rows === 0) hasInitialFit.current = false;
+    }, [rows]);
+
+    // Offscreen cache for the pixel grid
+    const offscreenCanvas = useMemo(() => {
+        if (rows === 0 || cols === 0) return null;
+
+        const offscreen = document.createElement('canvas');
+        offscreen.width = cols * CELL;
+        offscreen.height = rows * CELL;
+        const ctx = offscreen.getContext('2d');
+        if (!ctx) return null;
+
+        // Draw the pixel grid once
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                ctx.fillStyle = pixelColors[r][c];
+                ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+            }
+        }
+        return offscreen;
+    }, [pixelColors, rows, cols]);
+
+    // Drawing
+    useLayoutEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -78,13 +123,14 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
         ctx.save();
         ctx.translate(offsetX, offsetY);
 
-        // 1) Pixel fill
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const x = c * cs, y = r * cs;
-                ctx.fillStyle = pixelColors[r][c];
-                ctx.fillRect(x, y, cs, cs);
-            }
+        // 1) Fixed background draw from offscreen cache
+        if (offscreenCanvas) {
+            ctx.imageSmoothingEnabled = false; // Keep it crisp
+            ctx.drawImage(
+                offscreenCanvas,
+                0, 0, cols * CELL, rows * CELL,
+                0, 0, cols * cs, rows * cs
+            );
         }
 
         // 2) Grid overlay
@@ -147,7 +193,7 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
             }
         }
 
-        // 5) Next unmarked highlight (pulsing yellow rim — we just draw once)
+        // 5) Next unmarked highlight
         if (nextUnmarked && !previewMode) {
             const [nr, nc] = nextUnmarked;
             const x = nc * cs, y = nr * cs;
@@ -173,9 +219,9 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
 
         ctx.restore();
     }, [
-        pixelColors, marked, zp, showGrid, previewMode,
+        offscreenCanvas, marked, zp, showGrid, previewMode,
         highlightedColor, nextUnmarked, isRectSelecting, rectStart, rectEnd,
-        rows, cols,
+        rows, cols, canvasSize
     ]);
 
     // Pointer interaction for pixel toggle / rect select
