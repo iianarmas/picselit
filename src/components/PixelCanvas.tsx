@@ -18,7 +18,6 @@ interface PixelCanvasProps {
 
 const CELL = 20; // base cell size in canvas pixels (before zoom)
 
-interface Rect { r1: number; c1: number; r2: number; c2: number }
 
 export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     pixelColors, marked, highlightedColor, nextUnmarked,
@@ -272,8 +271,8 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
 
             {/* Zoom indicator */}
             {!isEmpty && (
-                <div className="absolute bottom-3 right-3 text-xs font-mono px-2 py-1 rounded"
-                    style={{ background: 'rgba(15,17,23,0.75)', color: 'var(--color-muted)', backdropFilter: 'blur(4px)' }}>
+                <div className="absolute bottom-3 right-3 text-xs font-mono px-2 py-1 rounded border shadow-sm"
+                    style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-muted)', opacity: 0.9 }}>
                     {Math.round(zp.scale * 100)}% · scroll to zoom · space+drag to pan · drag to select
                 </div>
             )}

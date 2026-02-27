@@ -23,6 +23,9 @@ interface ToolbarProps {
     onMarkAll: () => void;
     onUnmarkAll: () => void;
     onResetImage: () => void;
+    onSave?: () => void;
+    onOpenProjects?: () => void;
+    isSaving?: boolean;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -31,6 +34,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     onUndo, onRedo, onToggleGrid, onTogglePreview, onNextBead,
     onDownloadPlain, onDownloadMarked, onDownloadScaled,
     onMarkAll, onUnmarkAll, onResetImage,
+    onSave, onOpenProjects, isSaving,
 }) => {
     const [downloadOpen, setDownloadOpen] = useState(false);
     const [batchOpen, setBatchOpen] = useState(false);
@@ -162,7 +166,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
             {/* Progress */}
             {hasData && (
-                <div className="flex items-center gap-2 mr-2">
+                <div className="flex items-center gap-2 mr-2 border-r pr-4" style={{ borderColor: 'var(--color-border)' }}>
                     <div className="text-xs font-mono" style={{ color: 'var(--color-muted)' }}>{markedCount}/{totalCount}</div>
                     <div className="w-24 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-border)' }}>
                         <div
@@ -173,6 +177,35 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     <div className="text-xs font-mono" style={{ color: pct === 100 ? 'var(--color-success)' : 'var(--color-accent2)' }}>{pct}%</div>
                 </div>
             )}
+
+            {/* Projects & Save */}
+            <div className="flex items-center gap-2 mr-2">
+                <button
+                    onClick={onOpenProjects}
+                    className="toolbar-btn text-xs font-medium"
+                    style={{
+                        padding: '6px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5,
+                        background: 'transparent', border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)', cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                >
+                    <Grid size={14} /> My Projects
+                </button>
+                <button
+                    onClick={onSave}
+                    disabled={!hasData || isSaving}
+                    className="toolbar-btn text-xs font-medium text-white shadow-sm hover:opacity-90"
+                    style={{
+                        padding: '6px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5,
+                        background: 'linear-gradient(135deg, var(--color-accent2), var(--color-accent))',
+                        border: 'none', cursor: (hasData && !isSaving) ? 'pointer' : 'not-allowed',
+                        opacity: (hasData && !isSaving) ? 1 : 0.6, transition: 'all 0.15s',
+                    }}
+                >
+                    {isSaving ? <Navigation className="animate-spin" size={14} /> : <CheckSquare size={14} />}
+                    {isSaving ? 'Saving...' : 'Save'}
+                </button>
+            </div>
 
             {/* Download dropdown */}
             <div className="relative">

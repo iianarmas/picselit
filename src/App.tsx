@@ -7,7 +7,14 @@ import { Toolbar } from './components/Toolbar';
 import { usePixelEngine } from './hooks/usePixelEngine';
 import { useMarkingState } from './hooks/useMarkingState';
 import { downloadPNG } from './utils/exportUtils';
-import { Layers, Settings, Palette, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useAuth } from './hooks/useAuth';
+import { AuthModal } from './components/AuthModal';
+import { useProjects } from './hooks/useProjects';
+import type { ProjectData } from './hooks/useProjects';
+import { ProjectsModal } from './components/ProjectsModal';
+import type { MarkGrid } from './hooks/useMarkingState';
+import { useTheme } from './hooks/useTheme';
+import { Layers, Settings, Palette, ChevronLeft, ChevronRight, Loader2, Moon, Sun } from 'lucide-react';
 
 const DEFAULT_GRID_W = 32;
 const DEFAULT_GRID_H = 32;
@@ -19,6 +26,21 @@ export default function App() {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   const { result, isProcessing, process, reprocess } = usePixelEngine();
+
+  // Theme
+  const { theme, toggleTheme } = useTheme();
+
+  // Auth
+  const { user, signOut } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Projects
+  const { saveProject } = useProjects();
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const restoreMarkingRef = useRef<MarkGrid | null>(null);
+  const [originalImageDataUrl, setOriginalImageDataUrl] = useState<string | null>(null);
 
   // Grid settings
   const [gridW, setGridW] = useState(DEFAULT_GRID_W);
@@ -62,12 +84,25 @@ export default function App() {
   // When result changes, reset marking
   useEffect(() => {
     if (result) {
-      marking.reset(result.pixelColors.length, result.pixelColors[0]?.length ?? 0);
+      if (restoreMarkingRef.current) {
+        marking.setMarkedGrid(restoreMarkingRef.current);
+        restoreMarkingRef.current = null;
+      } else {
+        marking.reset(result.pixelColors.length, result.pixelColors[0]?.length ?? 0);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
   const handleImageLoad = useCallback((img: HTMLImageElement) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.drawImage(img, 0, 0);
+    setOriginalImageDataUrl(canvas.toDataURL('image/png'));
+    setActiveProjectId(null);
+
     const ratio = img.naturalWidth / img.naturalHeight;
     setAspectRatio(ratio);
     const w = DEFAULT_GRID_W;
@@ -84,6 +119,8 @@ export default function App() {
     setImageLoaded(false);
     setAspectRatio(null);
     setHighlightedColor(null);
+    setOriginalImageDataUrl(null);
+    setActiveProjectId(null);
     marking.reset(0, 0);
     setGridW(DEFAULT_GRID_W);
     setGridH(DEFAULT_GRID_H);
@@ -104,6 +141,74 @@ export default function App() {
   const handleRegisterPanToNext = useCallback((fn: () => void) => {
     panToNextRef.current = fn;
   }, []);
+
+  const handleSave = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    if (!originalImageDataUrl) return;
+
+    setIsSaving(true);
+    try {
+      const saved = await saveProject({
+        name: `Artwork - ${new Date().toLocaleDateString()}`,
+        image_data: originalImageDataUrl,
+        grid_w: gridW,
+        grid_h: gridH,
+        link_aspect: linkAspect,
+        brightness,
+        contrast,
+        saturation,
+        vibrancy,
+        target_colors: targetColors,
+        color_similarity: colorSimilarity,
+        marked_pixels: marking.marked
+      }, activeProjectId || undefined);
+
+      if (saved) {
+        setActiveProjectId(saved.id);
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleLoadProject = (project: ProjectData) => {
+    const img = new Image();
+    img.onload = () => {
+      setOriginalImageDataUrl(project.image_data);
+
+      const ratio = img.naturalWidth / img.naturalHeight;
+      setAspectRatio(ratio);
+      setGridW(project.grid_w);
+      setGridH(project.grid_h);
+      setLinkAspect(project.link_aspect);
+      setBrightness(project.brightness);
+      setContrast(project.contrast);
+      setSaturation(project.saturation);
+      setVibrancy(project.vibrancy);
+      setTargetColors(project.target_colors);
+      setColorSimilarity(project.color_similarity);
+
+      setImageLoaded(true);
+      setHighlightedColor(null);
+
+      setActiveProjectId(project.id);
+      restoreMarkingRef.current = project.marked_pixels;
+
+      process(img, project.grid_w, project.grid_h, {
+        brightness: project.brightness,
+        contrast: project.contrast,
+        saturation: project.saturation,
+        vibrancy: project.vibrancy,
+        targetColors: project.target_colors,
+        colorSimilarity: project.color_similarity
+      });
+    };
+    img.src = project.image_data;
+    setShowProjectsModal(false);
+  };
 
   const pixelColors = result?.pixelColors ?? [];
   const uniqueColors = result?.uniqueColors ?? [];
@@ -135,11 +240,60 @@ export default function App() {
         <div className="flex-1" />
 
         {isProcessing && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-muted)' }}>
+          <div className="flex items-center gap-2 text-xs mr-4" style={{ color: 'var(--color-muted)' }}>
             <Loader2 size={13} className="animate-spin" /> Processing…
           </div>
         )}
+
+        <div className="flex items-center gap-3 text-sm">
+          <button
+            onClick={toggleTheme}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-[var(--color-surface2)] text-[var(--color-muted)] hover:text-[var(--color-text)] border border-transparent hover:border-[var(--color-border)]"
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+
+          {user ? (
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shadow-md border border-[var(--color-accent2)]"
+                style={{ background: 'linear-gradient(135deg, #a78bfa, #6c63ff)' }}
+              >
+                {user.user_metadata?.first_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-xs leading-none" style={{ color: 'var(--color-text)' }}>
+                  {user.user_metadata?.first_name} {user.user_metadata?.last_name}
+                </span>
+                <span className="text-[10px] opacity-70 mt-0.5 leading-none" style={{ color: 'var(--color-muted)' }}>
+                  {user.email}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  handleReset();
+                  signOut();
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg border ml-2 transition-colors hover:bg-[var(--color-surface2)]"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="px-4 py-1.5 rounded-lg font-medium text-white transition-opacity hover:opacity-90"
+              style={{ background: 'var(--color-accent)' }}
+            >
+              Log In
+            </button>
+          )}
+        </div>
       </header>
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+      {showProjectsModal && <ProjectsModal onClose={() => setShowProjectsModal(false)} onLoadProject={handleLoadProject} />}
 
       {/* Toolbar */}
       <Toolbar
@@ -161,6 +315,9 @@ export default function App() {
         onMarkAll={marking.markAll}
         onUnmarkAll={marking.unmarkAll}
         onResetImage={handleReset}
+        onSave={handleSave}
+        onOpenProjects={() => user ? setShowProjectsModal(true) : setShowAuthModal(true)}
+        isSaving={isSaving}
       />
 
       {/* Main content */}
@@ -262,7 +419,16 @@ export default function App() {
               <div className="w-full max-w-sm">
                 <UploadPanel onImageLoad={handleImageLoad} />
               </div>
-              <div className="flex gap-6 text-xs" style={{ color: 'var(--color-muted)' }}>
+
+              <button
+                onClick={() => user ? setShowProjectsModal(true) : setShowAuthModal(true)}
+                className="text-sm font-medium hover:underline flex items-center gap-2 mt-2 transition-all"
+                style={{ color: 'var(--color-accent)' }}
+              >
+                <Layers size={16} /> Open a Saved Project
+              </button>
+
+              <div className="flex gap-6 text-xs mt-4" style={{ color: 'var(--color-muted)' }}>
                 {['🎨 Adjust colors', '🔲 Interactive grid', '✅ Track progress', '📥 Export PNG'].map(f => (
                   <span key={f}>{f}</span>
                 ))}

@@ -23,6 +23,7 @@ export interface MarkingState {
     undo: () => void;
     redo: () => void;
     reset: (rows: number, cols: number) => void;
+    setMarkedGrid: (grid: MarkGrid) => void;
     markAll: () => void;
     unmarkAll: () => void;
 }
@@ -106,6 +107,12 @@ export function useMarkingState(initialRows = 0, initialCols = 0): MarkingState 
         setRedoStack([]);
     }, []);
 
+    const setMarkedGrid = useCallback((grid: MarkGrid) => {
+        setMarked(cloneGrid(grid));
+        setUndoStack([]);
+        setRedoStack([]);
+    }, []);
+
     const markAll = useCallback(() => {
         setMarked(prev => {
             pushUndo(prev);
@@ -149,6 +156,7 @@ export function useMarkingState(initialRows = 0, initialCols = 0): MarkingState 
         undo,
         redo,
         reset,
+        setMarkedGrid,
         markAll,
         unmarkAll,
     };

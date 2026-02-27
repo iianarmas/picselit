@@ -20,7 +20,7 @@ export interface ZoomPanHandlers {
     state: ZoomPanState;
 }
 
-const MIN_SCALE = 0.5;
+const MIN_SCALE = 0.05;
 const MAX_SCALE = 32;
 
 export function useZoomPan(
