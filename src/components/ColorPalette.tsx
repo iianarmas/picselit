@@ -116,7 +116,6 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
                 {filtered.map(({ hex, count }) => {
                     const markedCount = getMarkedCountForColor(hex, pixelColors, marked);
                     const isHighlighted = highlightedColor === hex;
-                    const pct = Math.round((count / totalPixels) * 100);
                     const allMarked = markedCount === count;
                     const textColor = luminance(hex) > 0.4 ? '#000' : '#fff';
 
@@ -157,7 +156,23 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
                                             maxLength={4}
                                         />
                                     </div>
-                                    <span className="text-xs font-mono whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>{count} <span style={{ fontSize: 9, color: 'var(--color-border)' }}>({pct}%)</span></span>
+                                    <div className="text-right">
+                                        {allMarked ? (
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                                                style={{ background: 'rgba(34,211,160,0.15)', color: 'var(--color-success)', border: '1px solid rgba(34,211,160,0.3)' }}>
+                                                DONE
+                                            </span>
+                                        ) : (
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[10px] font-mono leading-none" style={{ color: 'var(--color-text)' }}>
+                                                    {markedCount}/{count}
+                                                </span>
+                                                <span className="text-[9px] font-mono leading-none mt-0.5" style={{ color: 'var(--color-muted)' }}>
+                                                    {count - markedCount} left
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 {/* Progress bar: markedCount / count */}
                                 <div className="h-1 rounded-full mt-0.5 overflow-hidden" style={{ background: 'var(--color-border)' }}>
