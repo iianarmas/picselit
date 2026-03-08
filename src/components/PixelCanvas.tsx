@@ -9,7 +9,9 @@ interface PixelCanvasProps {
     highlightedColor: string | null;
     nextUnmarked: [number, number] | null;
     showGrid: boolean;
+    showColorCodes: boolean;
     previewMode: boolean;
+    mappings: Record<string, string>;
     onTogglePixel: (row: number, col: number) => void;
     onMarkRect: (r1: number, c1: number, r2: number, c2: number) => void;
     /** Ref-callback so App can call panToCell */
@@ -21,7 +23,7 @@ const CELL = 20; // base cell size in canvas pixels (before zoom)
 
 export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     pixelColors, marked, highlightedColor, nextUnmarked,
-    showGrid, previewMode, onTogglePixel, onMarkRect, onRegisterPanToNext,
+    showGrid, showColorCodes, previewMode, mappings, onTogglePixel, onMarkRect, onRegisterPanToNext,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -123,8 +125,35 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
         ctx.save();
         ctx.translate(offsetX, offsetY);
 
-        // 1) Fixed background draw from offscreen cache
-        if (offscreenCanvas) {
+        // 1) Fixed background draw from offscreen cache OR Color Codes mode
+        if (showColorCodes) {
+            // Draw white hex/code squares
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const x = c * cs, y = r * cs;
+                    const hex = pixelColors[r][c];
+                    const code = mappings[hex.toLowerCase()] || hex.toUpperCase();
+
+                    // Background (square) - White as requested
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(x, y, cs, cs);
+
+                    // Text (code or hex)
+                    if (cs >= 6) {
+                        ctx.fillStyle = '#1e293b'; // Slate 800 for high contrast on white
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+
+                        // Dynamically adjust font size based on text length
+                        const fontSize = code.length > 4 ? cs * 0.22 : cs * 0.3;
+                        ctx.font = `bold ${Math.max(4, fontSize)}px monospace`;
+
+                        const displayCode = code.length > 7 ? code.substring(0, 6) + '..' : code;
+                        ctx.fillText(displayCode, x + cs / 2, y + cs / 2);
+                    }
+                }
+            }
+        } else if (offscreenCanvas) {
             ctx.imageSmoothingEnabled = false; // Keep it crisp
             ctx.drawImage(
                 offscreenCanvas,
@@ -219,9 +248,9 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
 
         ctx.restore();
     }, [
-        offscreenCanvas, marked, zp, showGrid, previewMode,
+        offscreenCanvas, marked, zp, showGrid, showColorCodes, previewMode,
         highlightedColor, nextUnmarked, isRectSelecting, rectStart, rectEnd,
-        rows, cols, canvasSize
+        rows, cols, canvasSize, mappings
     ]);
 
     // Pointer interaction for pixel toggle / rect select

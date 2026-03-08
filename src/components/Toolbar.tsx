@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Undo2, Redo2, Grid, EyeOff, Eye, Navigation, Download,
-    ChevronDown, Trash2, CheckSquare, Square, Loader2
+    ChevronDown, Trash2, CheckSquare, Square, Loader2, Hash
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -23,6 +23,8 @@ interface ToolbarProps {
     onMarkAll: () => void;
     onUnmarkAll: () => void;
     onResetImage: () => void;
+    showColorCodes: boolean;
+    onToggleColorCodes: () => void;
     onSave?: () => void;
     onOpenProjects?: () => void;
     isSaving?: boolean;
@@ -34,6 +36,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     onUndo, onRedo, onToggleGrid, onTogglePreview, onNextBead,
     onDownloadPlain, onDownloadMarked, onDownloadScaled,
     onMarkAll, onUnmarkAll, onResetImage,
+    showColorCodes, onToggleColorCodes,
     onSave, onOpenProjects, isSaving,
 }) => {
     const [downloadOpen, setDownloadOpen] = useState(false);
@@ -114,6 +117,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 >
                     {previewMode ? <EyeOff size={14} /> : <Eye size={14} />}
                     {previewMode ? 'Marks hidden' : 'Preview'}
+                </button>
+
+                {/* Color codes toggle */}
+                <button
+                    onClick={onToggleColorCodes}
+                    disabled={!hasData}
+                    title={showColorCodes ? 'Hide color codes' : 'Show color codes'}
+                    style={{
+                        padding: '6px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5,
+                        background: showColorCodes ? 'rgba(108,99,255,0.15)' : 'var(--color-surface2)',
+                        border: `1px solid ${showColorCodes ? 'rgba(108,99,255,0.4)' : 'var(--color-border)'}`,
+                        color: showColorCodes ? 'var(--color-accent2)' : 'var(--color-muted)',
+                        cursor: hasData ? 'pointer' : 'not-allowed', fontSize: 12, transition: 'all 0.15s',
+                    }}
+                >
+                    <Hash size={14} /> Codes
                 </button>
 
                 {/* Next bead */}

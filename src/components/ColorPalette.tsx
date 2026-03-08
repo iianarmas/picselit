@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { ColorEntry } from '../hooks/usePixelEngine';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
+import type { ColorMappings } from '../hooks/useColorMappings';
 
 interface ColorPaletteProps {
     uniqueColors: ColorEntry[];
@@ -8,8 +9,10 @@ interface ColorPaletteProps {
     marked: boolean[][];
     pixelColors: string[][];
     highlightedColor: string | null;
+    mappings: ColorMappings;
     onHighlightColor: (hex: string | null) => void;
     onMarkByColor: (hex: string, markValue: boolean) => void;
+    onSetMapping: (hex: string, code: string) => void;
 }
 
 function getMarkedCountForColor(hex: string, pixelColors: string[][], marked: boolean[][]): number {
@@ -31,14 +34,20 @@ function luminance(hex: string): number {
 
 export const ColorPalette: React.FC<ColorPaletteProps> = ({
     uniqueColors, totalPixels, marked, pixelColors,
-    highlightedColor, onHighlightColor, onMarkByColor,
+    highlightedColor, mappings, onHighlightColor, onMarkByColor, onSetMapping
 }) => {
     const [search, setSearch] = useState('');
+    const [codeSearch, setCodeSearch] = useState('');
     const [sortBy, setSortBy] = useState<'count' | 'hex'>('count');
     const [sortAsc, setSortAsc] = useState(false);
 
     const filtered = uniqueColors
-        .filter(c => c.hex.toLowerCase().includes(search.toLowerCase()))
+        .filter(c => {
+            const hexMatch = c.hex.toLowerCase().includes(search.toLowerCase());
+            const code = (mappings[c.hex.toLowerCase()] || '').toLowerCase();
+            const codeMatch = code.includes(codeSearch.toLowerCase());
+            return hexMatch && codeMatch;
+        })
         .sort((a, b) => {
             let cmp = sortBy === 'count' ? b.count - a.count : a.hex.localeCompare(b.hex);
             return sortAsc ? -cmp : cmp;
@@ -63,16 +72,29 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
             </div>
 
             {/* Search */}
-            <div className="relative mb-2">
-                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--color-muted)' }} />
-                <input
-                    type="text"
-                    placeholder="Search hex..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-7 pr-2 py-1.5 text-xs rounded-lg outline-none"
-                    style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                />
+            <div className="flex gap-2 mb-2">
+                <div className="relative flex-1">
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--color-muted)' }} />
+                    <input
+                        type="text"
+                        placeholder="Search hex..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-7 pr-2 py-1.5 text-xs rounded-lg outline-none"
+                        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                    />
+                </div>
+                <div className="relative flex-1">
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--color-muted)' }} />
+                    <input
+                        type="text"
+                        placeholder="Search code..."
+                        value={codeSearch}
+                        onChange={e => setCodeSearch(e.target.value)}
+                        className="w-full pl-7 pr-2 py-1.5 text-xs rounded-lg outline-none"
+                        style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                    />
+                </div>
             </div>
 
             {/* Column headers */}
@@ -117,9 +139,25 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
                             </div>
                             {/* Hex + progress */}
                             <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-mono" style={{ color: 'var(--color-text)' }}>{hex.toUpperCase()}</span>
-                                    <span className="text-xs font-mono" style={{ color: 'var(--color-muted)' }}>{count} <span style={{ fontSize: 9, color: 'var(--color-border)' }}>({pct}%)</span></span>
+                                <div className="flex justify-between items-center gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className="text-xs font-mono" style={{ color: 'var(--color-text)' }}>{hex.toUpperCase()}</span>
+                                        <input
+                                            type="text"
+                                            placeholder="Code"
+                                            value={mappings[hex.toLowerCase()] || ''}
+                                            onChange={e => onSetMapping(hex, e.target.value.toUpperCase())}
+                                            onClick={e => e.stopPropagation()}
+                                            className="w-12 px-1 py-0 text-[10px] font-bold rounded border outline-none text-center"
+                                            style={{
+                                                background: 'var(--color-bg)',
+                                                borderColor: 'var(--color-border)',
+                                                color: 'var(--color-accent2)',
+                                            }}
+                                            maxLength={4}
+                                        />
+                                    </div>
+                                    <span className="text-xs font-mono whitespace-nowrap" style={{ color: 'var(--color-muted)' }}>{count} <span style={{ fontSize: 9, color: 'var(--color-border)' }}>({pct}%)</span></span>
                                 </div>
                                 {/* Progress bar: markedCount / count */}
                                 <div className="h-1 rounded-full mt-0.5 overflow-hidden" style={{ background: 'var(--color-border)' }}>
@@ -131,7 +169,7 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
                             </div>
                             {/* Mark all / unmark all button */}
                             <button
-                                className="text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
                                 style={{
                                     background: allMarked ? 'rgba(248,113,113,0.15)' : 'rgba(34,211,160,0.15)',
                                     color: allMarked ? '#f87171' : 'var(--color-success)',

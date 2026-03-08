@@ -14,6 +14,7 @@ import type { ProjectData } from './hooks/useProjects';
 import { ProjectsModal } from './components/ProjectsModal';
 import type { MarkGrid } from './hooks/useMarkingState';
 import { useTheme } from './hooks/useTheme';
+import { useColorMappings } from './hooks/useColorMappings';
 import { MobileNav } from './components/MobileNav';
 import { Layers, Settings, Palette, ChevronLeft, ChevronRight, Loader2, Moon, Sun, Menu } from 'lucide-react';
 
@@ -58,10 +59,14 @@ export default function App() {
 
   // UI state
   const [showGrid, setShowGrid] = useState(true);
+  const [showColorCodes, setShowColorCodes] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [highlightedColor, setHighlightedColor] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('settings');
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
+
+  // Color mappings
+  const { mappings, setMapping } = useColorMappings();
 
   // Marking
   const marking = useMarkingState();
@@ -311,6 +316,7 @@ export default function App() {
         canRedo={marking.canRedo}
         showGrid={showGrid}
         previewMode={previewMode}
+        showColorCodes={showColorCodes}
         hasData={imageLoaded && !!result}
         markedCount={marking.markedCount}
         totalCount={marking.totalCount}
@@ -318,6 +324,7 @@ export default function App() {
         onRedo={marking.redo}
         onToggleGrid={() => setShowGrid(v => !v)}
         onTogglePreview={() => setPreviewMode(v => !v)}
+        onToggleColorCodes={() => setShowColorCodes(v => !v)}
         onNextBead={() => panToNextRef.current?.()}
         onDownloadPlain={handleDownloadPlain}
         onDownloadMarked={handleDownloadMarked}
@@ -411,8 +418,10 @@ export default function App() {
                   marked={marking.marked}
                   pixelColors={pixelColors}
                   highlightedColor={highlightedColor}
+                  mappings={mappings}
                   onHighlightColor={setHighlightedColor}
                   onMarkByColor={(hex, v) => marking.markByColor(hex, pixelColors, v)}
+                  onSetMapping={setMapping}
                 />
               )}
               {activeTab === 'palette' && !result && (
@@ -477,7 +486,9 @@ export default function App() {
               highlightedColor={highlightedColor}
               nextUnmarked={marking.nextUnmarked}
               showGrid={showGrid}
+              showColorCodes={showColorCodes}
               previewMode={previewMode}
+              mappings={mappings}
               onTogglePixel={marking.togglePixel}
               onMarkRect={marking.markRect}
               onRegisterPanToNext={handleRegisterPanToNext}
